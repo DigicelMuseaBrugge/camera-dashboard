@@ -11,19 +11,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:        #0B0F14;
-    --panel:     #121821;
-    --panel-2:   #0E141C;
-    --border:    #1F2733;
-    --border-2:  #2A3444;
-    --text:      #E7EBF1;
-    --muted:     #7C8798;
-    --muted-2:   #58626F;
-    --signal:    #F2A93B;
-    --signal-dim:#8A6425;
-    --teal:      #35D0BA;
-    --rose:      #F2555A;
-    --violet:    #8B87F2;
+    --bg:        #F3F4F6;
+    --panel:     #FFFFFF;
+    --panel-2:   #F8F9FB;
+    --border:    #E5E7EB;
+    --border-2:  #D1D5DB;
+    --text:      #111827;
+    --muted:     #6B7280;
+    --muted-2:   #9CA3AF;
+    --signal:    #2563EB;
+    --signal-dim:#93B4F5;
+    --signal-ink:#FFFFFF;
+    --amber:     #D97706;
+    --teal:      #0D9488;
+    --rose:      #E11D48;
+    --violet:    #7C3AED;
   }
   html,body{ background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; }
   .mono{ font-family:'IBM Plex Mono',monospace; }
@@ -35,10 +37,10 @@
     background-size: 100% 28px;
     mask-image: linear-gradient(to bottom, black, transparent);
   }
-  .card{ background:var(--panel); border:1px solid var(--border); }
-  input[type="date"]::-webkit-calendar-picker-indicator{ filter: invert(0.6); cursor:pointer; }
+  .card{ background:var(--panel); border:1px solid var(--border); box-shadow: 0 1px 2px rgba(16,24,40,0.04); }
+  input[type="date"]::-webkit-calendar-picker-indicator{ cursor:pointer; opacity:0.55; }
   .checkbox-row{ transition: background-color .12s ease; }
-  .checkbox-row:hover{ background-color: rgba(255,255,255,0.03); }
+  .checkbox-row:hover{ background-color: rgba(0,0,0,0.03); }
   input[type="checkbox"]{ accent-color: var(--signal); }
   .signal-btn{ transition: all .15s ease; }
   .modal-backdrop{ background: rgba(4,6,9,0.72); backdrop-filter: blur(2px); }
@@ -68,7 +70,7 @@
     <!-- Upload -->
     <div class="px-5 py-5 border-b border-[var(--border)]">
       <label class="text-[11px] uppercase tracking-wide text-[var(--muted-2)] font-semibold">Data</label>
-      <label for="csvInput" class="focus-ring mt-3 flex items-center justify-center gap-2 w-full tap-target rounded-md border border-dashed border-[var(--border-2)] text-[13px] text-[var(--muted)] hover:border-[var(--signal)] hover:text-[var(--signal)] cursor-pointer transition-colors">
+      <label for="csvInput" class="focus-ring mt-3 flex items-center justify-center gap-2 w-full tap-target rounded-md bg-[var(--signal)] text-white text-[13px] font-medium hover:brightness-110 cursor-pointer transition-all shadow-sm">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0-12 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         Upload CSV
       </label>
@@ -158,7 +160,7 @@
           </div>
           <div class="card rounded-lg p-4">
             <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Busiest day</p>
-            <p id="statBusiestDay" class="mono text-[26px] font-semibold mt-1.5 text-[var(--signal)]">—</p>
+            <p id="statBusiestDay" class="mono text-[26px] font-semibold mt-1.5 text-[var(--amber)]">—</p>
             <p id="statBusiestDaySub" class="text-[12px] text-[var(--muted)] mt-1">—</p>
           </div>
           <div class="card rounded-lg p-4">
@@ -230,8 +232,8 @@
 
     <p class="text-[12px] text-[var(--muted)] mt-4 mb-1.5">Location type</p>
     <div class="flex gap-1.5">
-      <button data-quick="Inside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--signal)] hover:text-[var(--signal)]">Inside</button>
-      <button data-quick="Outside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--signal)] hover:text-[var(--signal)]">Outside</button>
+      <button data-quick="Inside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--signal)] hover:text-[var(--signal)] hover:bg-blue-50">Inside</button>
+      <button data-quick="Outside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--teal)] hover:text-[var(--teal)] hover:bg-teal-50">Outside</button>
     </div>
 
     <p class="text-[12px] text-[var(--muted)] mt-4 mb-1.5">Or enter a custom label</p>
@@ -239,7 +241,7 @@
 
     <div class="flex gap-2 mt-5">
       <button id="modalCancelBtn" class="flex-1 tap-target text-[13px] text-[var(--muted)] border border-[var(--border)] rounded-md hover:text-[var(--text)] transition-colors">Cancel</button>
-      <button id="modalConfirmBtn" class="flex-1 tap-target text-[13px] font-medium bg-[var(--signal)] text-[#1A1204] rounded-md hover:brightness-110 transition-all">Add dataset</button>
+      <button id="modalConfirmBtn" class="flex-1 tap-target text-[13px] font-medium bg-[var(--signal)] text-white rounded-md hover:brightness-110 transition-all">Add dataset</button>
     </div>
   </div>
 </div>
@@ -266,7 +268,7 @@
     scenarios: new Set()
   };
 
-  const palette = ['#F2A93B', '#35D0BA', '#8B87F2', '#F2555A', '#5CC8F2', '#C9E265'];
+  const palette = ['#2563EB', '#0D9488', '#D97706', '#E11D48', '#7C3AED', '#059669'];
 
   // ---------- persistence ----------
   function loadState(){
@@ -454,7 +456,7 @@
     if(active){
       btn.style.borderColor = 'var(--signal)';
       btn.style.color = 'var(--signal)';
-      btn.style.background = 'rgba(242,169,59,0.08)';
+      btn.style.background = 'rgba(37,99,235,0.08)';
     }else{
       btn.style.borderColor = 'var(--border-2)';
       btn.style.color = 'var(--muted)';
@@ -636,8 +638,8 @@
         datasets: [{
           label: 'Total human count',
           data: entries.map(e => e[1]),
-          backgroundColor: '#35D0BA99',
-          borderColor: '#35D0BA',
+          backgroundColor: '#0D948833',
+          borderColor: '#0D9488',
           borderWidth: 1.5,
           borderRadius: 3,
           maxBarThickness: 42
@@ -653,21 +655,21 @@
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: showLegend, labels: { color: '#7C8798', boxWidth: 10, font: { family: 'Inter', size: 11.5 } } },
+        legend: { display: showLegend, labels: { color: '#6B7280', boxWidth: 10, font: { family: 'Inter', size: 11.5 } } },
         tooltip: {
-          backgroundColor: '#0E141C',
-          borderColor: '#2A3444',
+          backgroundColor: '#FFFFFF',
+          borderColor: '#D1D5DB',
           borderWidth: 1,
-          titleColor: '#E7EBF1',
-          bodyColor: '#C7CDD6',
+          titleColor: '#111827',
+          bodyColor: '#374151',
           titleFont: { family: 'IBM Plex Mono', size: 11.5 },
           bodyFont: { family: 'IBM Plex Mono', size: 11.5 },
           padding: 10
         }
       },
       scales: {
-        x: { ticks: { color: '#58626F', font: { family: 'IBM Plex Mono', size: 10.5 }, maxRotation: 0, autoSkip: true }, grid: { color: '#1F273300' } },
-        y: { ticks: { color: '#58626F', font: { family: 'IBM Plex Mono', size: 10.5 } }, grid: { color: '#1F2733' }, beginAtZero: true }
+        x: { ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 }, maxRotation: 0, autoSkip: true }, grid: { color: '#00000000' } },
+        y: { ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 } }, grid: { color: '#E5E7EB' }, beginAtZero: true }
       }
     };
   }
@@ -677,7 +679,7 @@
     const body = document.getElementById('tableBody');
     const sorted = filtered.slice().sort((a,b) => b.start - a.start).slice(0, 150);
     body.innerHTML = sorted.map(r => `
-      <tr class="border-b border-[var(--border)] hover:bg-white/[0.02]">
+      <tr class="border-b border-[var(--border)] hover:bg-black/[0.02]">
         <td class="py-1.5 pr-4 whitespace-nowrap">${r.dateKey}</td>
         <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.cameraSerial)}</td>
         <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.scenarioName)}</td>
