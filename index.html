@@ -306,14 +306,25 @@
   // Expected shape:
   // "{Camera name} export-crosslinecounting-{code} C in|out-{start}-{end}"
   // e.g. "Binnenplein bron export-crosslinecounting-91.9 C in-2026-07-28T00_00_00.000+0200-..."
+  // Hardcoded IP-code -> camera name lookup
+  const CAMERA_NAME_MAP = {
+    '91.25': 'Scala Zuid',
+    '91.26': 'Scala Noord',
+    '91.51': 'Pas Noord',
+    '91.70': 'Doorgang Garemarkt',
+    '91.9':  'Binnenplein Bron'
+  };
+
   function parseFilenameMeta(filename){
     const base = filename.replace(/\.csv$/i, '');
-    const match = base.match(/^(.*?)\s+export-crosslinecounting-(.*?)\s+C\s+(in|out)\b/i);
+    // "export-crosslinecounting-{code} C in|out-{start}-{end}"
+    const match = base.match(/^export-crosslinecounting-(.*?)\s+C\s+(in|out)\b/i);
     if(match){
+      const code = match[1].trim();
       return {
-        cameraName: match[1].trim(),
-        code: match[2].trim(),
-        label: match[3].toLowerCase() === 'in' ? 'Inside' : 'Outside'
+        cameraName: CAMERA_NAME_MAP[code] || code,
+        code: code,
+        label: match[2].toLowerCase() === 'in' ? 'Inside' : 'Outside'
       };
     }
     return { cameraName: base, code: '', label: 'Unlabeled' };
