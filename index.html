@@ -75,7 +75,7 @@
         Upload CSV
       </label>
       <input id="csvInput" type="file" accept=".csv,text/csv" multiple class="hidden">
-      <p class="text-[11px] text-[var(--muted-2)] mt-2">start, end, camera serial, scenario name, human, note</p>
+      <p class="text-[11px] text-[var(--muted-2)] mt-2">Camera name and Inside/Outside are read from the filename automatically.</p>
     </div>
 
     <!-- Uploads history -->
@@ -224,29 +224,7 @@
   </main>
 </div>
 
-<!-- ============ LABEL MODAL ============ -->
-<div id="labelModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center px-4">
-  <div class="card rounded-lg w-full max-w-sm p-6">
-    <h3 class="text-[15px] font-semibold">Label this dataset</h3>
-    <p id="modalFileName" class="text-[12px] text-[var(--muted)] mt-1 mono truncate"></p>
 
-    <p class="text-[12px] text-[var(--muted)] mt-4 mb-1.5">Location type</p>
-    <div class="flex gap-1.5">
-      <button data-quick="Inside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--signal)] hover:text-[var(--signal)] hover:bg-blue-50">Inside</button>
-      <button data-quick="Outside" class="quickLabelBtn signal-btn flex-1 tap-target rounded-md border border-[var(--border-2)] text-[13px] hover:border-[var(--teal)] hover:text-[var(--teal)] hover:bg-teal-50">Outside</button>
-    </div>
-
-    <p class="text-[12px] text-[var(--muted)] mt-4 mb-1.5">Or enter a custom label</p>
-    <input id="modalLabelInput" type="text" placeholder="e.g. Loading dock" class="focus-ring w-full bg-[var(--panel-2)] border border-[var(--border)] rounded-md px-3 py-2 text-[13px] text-[var(--text)]">
-
-    <div class="flex gap-2 mt-5">
-      <button id="modalCancelBtn" class="flex-1 tap-target text-[13px] text-[var(--muted)] border border-[var(--border)] rounded-md hover:text-[var(--text)] transition-colors">Cancel</button>
-      <button id="modalConfirmBtn" class="flex-1 tap-target text-[13px] font-medium bg-[var(--signal)] text-white rounded-md hover:brightness-110 transition-all">Add dataset</button>
-    </div>
-  </div>
-</div>
-
-<script>
 (function(){
   "use strict";
 
@@ -255,7 +233,6 @@
 
   let records = [];   // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, uploadId}
   let uploads = [];    // {id, filename, label, count, uploadedAt}
-  let pendingFiles = []; // queue for modal flow
   let chartType = 'line';
   let trendChart = null;
   let cameraChart = null;
@@ -286,45 +263,75 @@
     localStorage.setItem(STORAGE_UPLOADS, JSON.stringify(uploads));
   }
 
-  // ---------- csv upload flow ----------
-  const csvInput = document.getElementById('csvInput');
-  const labelModal = document.getElementById('labelModal');
-  const modalFileName = document.getElementById('modalFileName');
-  const modalLabelInput = document.getElementById('modalLabelInput');
+<script>
+(function(){
+  "use strict";
 
-  csvInput.addEventListener('change', (e) => {
-    pendingFiles = Array.from(e.target.files);
-    csvInput.value = '';
-    processNextFile();
-  });
+  const STORAGE_RECORDS = 'footfall_records_v1';
+  const STORAGE_UPLOADS = 'footfall_uploads_v1';
 
-  function processNextFile(){
-    if(pendingFiles.length === 0) return;
-    const file = pendingFiles[0];
-    modalFileName.textContent = file.name;
-    modalLabelInput.value = '';
-    labelModal.classList.remove('hidden');
+  let records = [];   // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, cameraName, uploadId}
+  let uploads = [];    // {id, filename, cameraName, label, count, uploadedAt}
+  let chartType = 'line';
+  let trendChart = null;
+  let cameraChart = null;
+
+  const activeFilters = {
+    dateFrom: null,
+    dateTo: null,
+    label: 'All',
+    cameras: new Set(),
+    scenarios: new Set()
+  };
+
+  const palette = ['#2563EB', '#0D9488', '#D97706', '#E11D48', '#7C3AED', '#059669'];
+
+  // ---------- persistence ----------
+  function loadState(){
+    try{
+      const r = JSON.parse(localStorage.getItem(STORAGE_RECORDS) || '[]');
+      records = r.map(rec => ({...rec, start: new Date(rec.start)}));
+    }catch(e){ records = []; }
+    try{
+      uploads = JSON.parse(localStorage.getItem(STORAGE_UPLOADS) || '[]');
+    }catch(e){ uploads = []; }
   }
 
-  document.querySelectorAll('.quickLabelBtn').forEach(btn => {
-    btn.addEventListener('click', () => { modalLabelInput.value = btn.dataset.quick; });
+  function saveState(){
+    localStorage.setItem(STORAGE_RECORDS, JSON.stringify(records.map(r => ({...r, start: r.start.toISOString()}))));
+    localStorage.setItem(STORAGE_UPLOADS, JSON.stringify(uploads));
+  }
+
+  // ---------- filename parsing ----------
+  // Expected shape:
+  // "{Camera name} export-crosslinecounting-{code} C in|out-{start}-{end}"
+  // e.g. "Binnenplein bron export-crosslinecounting-91.9 C in-2026-07-28T00_00_00.000+0200-..."
+  function parseFilenameMeta(filename){
+    const base = filename.replace(/\.csv$/i, '');
+    const match = base.match(/^(.*?)\s+export-crosslinecounting-(.*?)\s+C\s+(in|out)\b/i);
+    if(match){
+      return {
+        cameraName: match[1].trim(),
+        code: match[2].trim(),
+        label: match[3].toLowerCase() === 'in' ? 'Inside' : 'Outside'
+      };
+    }
+    return { cameraName: base, code: '', label: 'Unlabeled' };
+  }
+
+  // ---------- csv upload flow ----------
+  const csvInput = document.getElementById('csvInput');
+
+  csvInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    csvInput.value = '';
+    files.forEach(file => {
+      const meta = parseFilenameMeta(file.name);
+      parseFile(file, meta);
+    });
   });
 
-  document.getElementById('modalCancelBtn').addEventListener('click', () => {
-    pendingFiles.shift();
-    labelModal.classList.add('hidden');
-    processNextFile();
-  });
-
-  document.getElementById('modalConfirmBtn').addEventListener('click', () => {
-    const file = pendingFiles.shift();
-    const label = (modalLabelInput.value || 'Unlabeled').trim();
-    labelModal.classList.add('hidden');
-    if(file) parseFile(file, label);
-    processNextFile();
-  });
-
-  function parseFile(file, label){
+  function parseFile(file, meta){
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -347,12 +354,13 @@
             scenarioName: (row['scenario name'] || row['Scenario Name'] || 'Unknown').trim(),
             human: human,
             note: (row['note'] || row['Note'] || '').trim(),
-            label: label,
+            label: meta.label,
+            cameraName: meta.cameraName,
             uploadId: uploadId
           });
           count++;
         });
-        uploads.push({ id: uploadId, filename: file.name, label: label, count: count, uploadedAt: new Date().toISOString() });
+        uploads.push({ id: uploadId, filename: file.name, cameraName: meta.cameraName, label: meta.label, count: count, uploadedAt: new Date().toISOString() });
         saveState();
         rebuildFilterOptions(true);
         renderUploadsList();
@@ -378,7 +386,7 @@
       const d = new Date(u.uploadedAt);
       row.innerHTML = `
         <div class="min-w-0">
-          <p class="text-[12px] text-[var(--text)] truncate">${escapeHtml(u.filename)}</p>
+          <p class="text-[12px] text-[var(--text)] truncate">${escapeHtml(u.cameraName || u.filename)}</p>
           <p class="text-[10.5px] text-[var(--muted-2)] mono">${escapeHtml(u.label)} · ${u.count} rows</p>
         </div>
         <button data-upload-id="${u.id}" class="removeUploadBtn shrink-0 text-[var(--muted-2)] hover:text-[var(--rose)] transition-colors" title="Remove dataset">
