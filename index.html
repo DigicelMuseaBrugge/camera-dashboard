@@ -602,10 +602,25 @@
   }
 
   // ---------- charts ----------
+  function getDateKeyRange(fromKey, toKey){
+    if(!fromKey || !toKey) return [];
+    const keys = [];
+    let cursor = new Date(fromKey + 'T00:00:00Z');
+    const end = new Date(toKey + 'T00:00:00Z');
+    while(cursor <= end){
+      keys.push(cursor.toISOString().slice(0,10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return keys;
+  }
+
   function renderTrendChart(filtered){
     const ctx = document.getElementById('trendChart').getContext('2d');
     const labelsSet = Array.from(new Set(filtered.map(r => r.label))).sort();
-    const dateKeys = Array.from(new Set(filtered.map(r => r.dateKey))).sort();
+    let dateKeys = getDateKeyRange(activeFilters.dateFrom, activeFilters.dateTo);
+    if(dateKeys.length === 0){
+      dateKeys = Array.from(new Set(filtered.map(r => r.dateKey))).sort();
+    }
 
     const datasets = labelsSet.map((lbl, i) => {
       const byDate = {};
