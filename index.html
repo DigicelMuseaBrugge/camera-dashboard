@@ -107,7 +107,7 @@
 
       <div class="mt-4">
         <div class="flex items-center justify-between">
-          <p class="text-[12px] text-[var(--muted)]">Camera serial</p>
+          <p class="text-[12px] text-[var(--muted)]">Camera name</p>
           <button data-target="cameraFilterList" class="selectAllBtn text-[11px] text-[var(--signal-dim)] hover:text-[var(--signal)]">All</button>
         </div>
         <div id="cameraFilterList" class="mt-1.5 space-y-0.5 max-h-32 overflow-y-auto rounded-md border border-[var(--border)] p-1"></div>
@@ -208,7 +208,7 @@
               <thead>
                 <tr class="text-left text-[var(--muted-2)] uppercase text-[10.5px] tracking-wide border-b border-[var(--border)]">
                   <th class="py-2 pr-4 font-medium">Date</th>
-                  <th class="py-2 pr-4 font-medium">Camera serial</th>
+                  <th class="py-2 pr-4 font-medium">Camera name</th>
                   <th class="py-2 pr-4 font-medium">Scenario</th>
                   <th class="py-2 pr-4 font-medium">Location</th>
                   <th class="py-2 pr-4 font-medium text-right">Human</th>
@@ -450,7 +450,7 @@
     });
 
     // camera serials
-    const cameras = Array.from(new Set(records.map(r => r.cameraSerial))).sort();
+    const cameras = Array.from(new Set(records.map(r => r.cameraName))).sort();
     if(resetSelection) activeFilters.cameras = new Set(cameras);
     renderCheckboxList('cameraFilterList', cameras, activeFilters.cameras);
 
@@ -542,7 +542,7 @@
       if(activeFilters.dateFrom && r.dateKey < activeFilters.dateFrom) return false;
       if(activeFilters.dateTo && r.dateKey > activeFilters.dateTo) return false;
       if(activeFilters.label !== 'All' && r.label !== activeFilters.label) return false;
-      if(activeFilters.cameras.size && !activeFilters.cameras.has(r.cameraSerial)) return false;
+      if(activeFilters.cameras.size && !activeFilters.cameras.has(r.cameraName)) return false;
       if(activeFilters.scenarios.size && !activeFilters.scenarios.has(r.scenarioName)) return false;
       return true;
     });
@@ -596,7 +596,7 @@
     document.getElementById('statPeakHourSub').textContent = peakHour !== null ? `${Math.round(peakVal).toLocaleString()} visits at this hour` : '—';
 
     // active cameras
-    const cams = new Set(filtered.map(r => r.cameraSerial));
+    const cams = new Set(filtered.map(r => r.cameraName));
     document.getElementById('statCameras').textContent = cams.size;
     document.getElementById('statCamerasSub').textContent = cams.size === 1 ? '1 camera in view' : `${cams.size} cameras in view`;
   }
@@ -635,7 +635,7 @@
   function renderCameraChart(filtered){
     const ctx = document.getElementById('cameraChart').getContext('2d');
     const byCam = {};
-    filtered.forEach(r => { byCam[r.cameraSerial] = (byCam[r.cameraSerial]||0) + r.human; });
+    filtered.forEach(r => { byCam[r.cameraName] = (byCam[r.cameraName]||0) + r.human; });
     const entries = Object.entries(byCam).sort((a,b) => b[1]-a[1]);
 
     if(cameraChart) cameraChart.destroy();
@@ -689,7 +689,7 @@
     body.innerHTML = sorted.map(r => `
       <tr class="border-b border-[var(--border)] hover:bg-black/[0.02]">
         <td class="py-1.5 pr-4 whitespace-nowrap">${r.dateKey}</td>
-        <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.cameraSerial)}</td>
+        <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.cameraName)}</td>
         <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.scenarioName)}</td>
         <td class="py-1.5 pr-4 whitespace-nowrap">${escapeHtml(r.label)}</td>
         <td class="py-1.5 pr-4 text-right">${Math.round(r.human).toLocaleString()}</td>
