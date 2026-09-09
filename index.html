@@ -21,7 +21,6 @@
     --muted-2:   #9CA3AF;
     --signal:    #2563EB;
     --signal-dim:#93B4F5;
-    --signal-ink:#FFFFFF;
     --amber:     #D97706;
     --teal:      #0D9488;
     --rose:      #E11D48;
@@ -43,13 +42,16 @@
   .checkbox-row:hover{ background-color: rgba(0,0,0,0.03); }
   input[type="checkbox"]{ accent-color: var(--signal); }
   .signal-btn{ transition: all .15s ease; }
-  .modal-backdrop{ background: rgba(4,6,9,0.72); backdrop-filter: blur(2px); }
-  .tap-target{ min-height:38px; }
+  .tap-target{ min-height:36px; }
   @keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
   .live-dot{ animation: pulse-dot 2s ease-in-out infinite; }
   .focus-ring:focus-visible{ outline: 2px solid var(--signal); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce){
     .live-dot{ animation: none; }
+  }
+  .dropdown-panel{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:30;
+    width:230px;
   }
 </style>
 </head>
@@ -58,7 +60,7 @@
 <div class="flex min-h-screen">
 
   <!-- ============ SIDEBAR ============ -->
-  <aside class="w-[300px] shrink-0 border-r border-[var(--border)] bg-[var(--panel-2)] flex flex-col h-screen sticky top-0">
+  <aside class="w-[280px] shrink-0 border-r border-[var(--border)] bg-[var(--panel-2)] flex flex-col h-screen sticky top-0">
     <div class="px-5 pt-6 pb-5 border-b border-[var(--border)]">
       <div class="flex items-center gap-2.5">
         <div class="w-2 h-2 rounded-full bg-[var(--signal)] live-dot"></div>
@@ -75,53 +77,17 @@
         Upload CSV
       </label>
       <input id="csvInput" type="file" accept=".csv,text/csv" multiple class="hidden">
-      <p class="text-[11px] text-[var(--muted-2)] mt-2">Camera name and Inside/Outside are read from the filename automatically.</p>
+      <p class="text-[11px] text-[var(--muted-2)] mt-2">Camera name and IN / OUT are read from the filename automatically.</p>
     </div>
 
     <!-- Uploads history -->
-    <div class="px-5 py-4 border-b border-[var(--border)] flex-1 min-h-0 flex flex-col overflow-hidden">
+    <div class="px-5 py-4 flex-1 min-h-0 flex flex-col overflow-hidden">
       <div class="flex items-center justify-between">
         <label class="text-[11px] uppercase tracking-wide text-[var(--muted-2)] font-semibold">Dataset history</label>
         <button id="clearAllBtn" class="text-[11px] text-[var(--muted-2)] hover:text-[var(--rose)] transition-colors">Clear all</button>
       </div>
       <div id="uploadsList" class="mt-3 space-y-1.5 overflow-y-auto pr-1"></div>
       <p id="uploadsEmpty" class="text-[12px] text-[var(--muted-2)] mt-2 italic">No datasets uploaded yet.</p>
-    </div>
-
-    <!-- Filters -->
-    <div class="px-5 py-5 overflow-y-auto" style="max-height:44vh;">
-      <label class="text-[11px] uppercase tracking-wide text-[var(--muted-2)] font-semibold">Filters</label>
-
-      <div class="mt-3">
-        <p class="text-[12px] text-[var(--muted)] mb-1.5">Date range</p>
-        <div class="flex items-center gap-2">
-          <input id="dateFrom" type="date" class="focus-ring w-1/2 bg-[var(--panel)] border border-[var(--border)] rounded-md px-2 py-1.5 text-[12px] mono text-[var(--text)]">
-          <input id="dateTo" type="date" class="focus-ring w-1/2 bg-[var(--panel)] border border-[var(--border)] rounded-md px-2 py-1.5 text-[12px] mono text-[var(--text)]">
-        </div>
-      </div>
-
-      <div class="mt-4">
-        <p class="text-[12px] text-[var(--muted)] mb-1.5">Location</p>
-        <div id="labelFilterGroup" class="flex flex-wrap gap-1.5"></div>
-      </div>
-
-      <div class="mt-4">
-        <div class="flex items-center justify-between">
-          <p class="text-[12px] text-[var(--muted)]">Camera name</p>
-          <button data-target="cameraFilterList" class="selectAllBtn text-[11px] text-[var(--signal-dim)] hover:text-[var(--signal)]">All</button>
-        </div>
-        <div id="cameraFilterList" class="mt-1.5 space-y-0.5 max-h-32 overflow-y-auto rounded-md border border-[var(--border)] p-1"></div>
-      </div>
-
-      <div class="mt-4">
-        <div class="flex items-center justify-between">
-          <p class="text-[12px] text-[var(--muted)]">Scenario name</p>
-          <button data-target="scenarioFilterList" class="selectAllBtn text-[11px] text-[var(--signal-dim)] hover:text-[var(--signal)]">All</button>
-        </div>
-        <div id="scenarioFilterList" class="mt-1.5 space-y-0.5 max-h-32 overflow-y-auto rounded-md border border-[var(--border)] p-1"></div>
-      </div>
-
-      <button id="resetFiltersBtn" class="focus-ring mt-4 w-full text-[12px] text-[var(--muted)] hover:text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-2)] rounded-md py-2 transition-colors">Reset filters</button>
     </div>
   </aside>
 
@@ -130,7 +96,7 @@
     <div class="max-w-[1180px] mx-auto px-8 py-8">
 
       <!-- Header -->
-      <div class="flex items-end justify-between mb-7">
+      <div class="flex items-end justify-between mb-5">
         <div>
           <h2 class="text-[22px] font-semibold tracking-tight">Traffic overview</h2>
           <p id="rangeLabel" class="text-[13px] text-[var(--muted)] mt-1">No data loaded yet</p>
@@ -139,6 +105,58 @@
           <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Records in view</p>
           <p id="recordCountHeader" class="mono text-[18px] text-[var(--text)]">0</p>
         </div>
+      </div>
+
+      <!-- ============ TOP FILTER BAR ============ -->
+      <div id="filterBar" class="card rounded-lg p-3 mb-6 flex flex-wrap items-center gap-2.5">
+
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] text-[var(--muted-2)] uppercase tracking-wide pr-0.5">Date</span>
+          <input id="dateFrom" type="date" class="focus-ring bg-[var(--panel)] border border-[var(--border)] rounded-md px-2 py-1.5 text-[12px] mono text-[var(--text)]">
+          <span class="text-[var(--muted-2)] text-[12px]">–</span>
+          <input id="dateTo" type="date" class="focus-ring bg-[var(--panel)] border border-[var(--border)] rounded-md px-2 py-1.5 text-[12px] mono text-[var(--text)]">
+        </div>
+
+        <div class="w-px h-6 bg-[var(--border)]"></div>
+
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] text-[var(--muted-2)] uppercase tracking-wide pr-0.5">Location</span>
+          <div id="labelFilterGroup" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <div class="w-px h-6 bg-[var(--border)]"></div>
+
+        <div class="relative">
+          <button id="cameraDropdownBtn" class="dropdownToggle focus-ring tap-target flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[var(--border-2)] text-[12px] text-[var(--text)] hover:border-[var(--signal)] transition-colors">
+            <span>Camera:</span>
+            <span id="cameraFilterBadge" class="mono text-[var(--muted)]">All</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="cameraDropdownPanel" class="dropdown-panel hidden card rounded-md p-2 shadow-lg">
+            <div class="flex items-center justify-between px-1 pb-1.5 mb-1 border-b border-[var(--border)]">
+              <span class="text-[11px] text-[var(--muted-2)] uppercase tracking-wide">Camera name</span>
+              <button data-target="cameraFilterList" class="selectAllBtn text-[11px] text-[var(--signal)] hover:underline">All / None</button>
+            </div>
+            <div id="cameraFilterList" class="space-y-0.5 max-h-56 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button id="scenarioDropdownBtn" class="dropdownToggle focus-ring tap-target flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[var(--border-2)] text-[12px] text-[var(--text)] hover:border-[var(--signal)] transition-colors">
+            <span>Scenario:</span>
+            <span id="scenarioFilterBadge" class="mono text-[var(--muted)]">All</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="scenarioDropdownPanel" class="dropdown-panel hidden card rounded-md p-2 shadow-lg">
+            <div class="flex items-center justify-between px-1 pb-1.5 mb-1 border-b border-[var(--border)]">
+              <span class="text-[11px] text-[var(--muted-2)] uppercase tracking-wide">Scenario name</span>
+              <button data-target="scenarioFilterList" class="selectAllBtn text-[11px] text-[var(--signal)] hover:underline">All / None</button>
+            </div>
+            <div id="scenarioFilterList" class="space-y-0.5 max-h-56 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <button id="resetFiltersBtn" class="focus-ring ml-auto tap-target text-[12px] text-[var(--muted)] hover:text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-2)] rounded-md px-3 transition-colors">Reset filters</button>
       </div>
 
       <!-- Empty state -->
@@ -193,7 +211,7 @@
         <!-- Camera comparison -->
         <div class="card rounded-lg p-5 mb-5">
           <h3 class="text-[14px] font-medium">Traffic by camera</h3>
-          <p class="text-[12px] text-[var(--muted)] mt-0.5 mb-3">Total human count per camera serial, current filters applied</p>
+          <p class="text-[12px] text-[var(--muted)] mt-0.5 mb-3">Total human count per camera name, current filters applied</p>
           <div class="h-[240px]"><canvas id="cameraChart"></canvas></div>
         </div>
 
@@ -224,45 +242,6 @@
   </main>
 </div>
 
-
-(function(){
-  "use strict";
-
-  const STORAGE_RECORDS = 'footfall_records_v1';
-  const STORAGE_UPLOADS = 'footfall_uploads_v1';
-
-  let records = [];   // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, uploadId}
-  let uploads = [];    // {id, filename, label, count, uploadedAt}
-  let chartType = 'line';
-  let trendChart = null;
-  let cameraChart = null;
-
-  const activeFilters = {
-    dateFrom: null,
-    dateTo: null,
-    label: 'All',
-    cameras: new Set(),
-    scenarios: new Set()
-  };
-
-  const palette = ['#2563EB', '#0D9488', '#D97706', '#E11D48', '#7C3AED', '#059669'];
-
-  // ---------- persistence ----------
-  function loadState(){
-    try{
-      const r = JSON.parse(localStorage.getItem(STORAGE_RECORDS) || '[]');
-      records = r.map(rec => ({...rec, start: new Date(rec.start)}));
-    }catch(e){ records = []; }
-    try{
-      uploads = JSON.parse(localStorage.getItem(STORAGE_UPLOADS) || '[]');
-    }catch(e){ uploads = []; }
-  }
-
-  function saveState(){
-    localStorage.setItem(STORAGE_RECORDS, JSON.stringify(records.map(r => ({...r, start: r.start.toISOString()}))));
-    localStorage.setItem(STORAGE_UPLOADS, JSON.stringify(uploads));
-  }
-
 <script>
 (function(){
   "use strict";
@@ -270,7 +249,7 @@
   const STORAGE_RECORDS = 'footfall_records_v1';
   const STORAGE_UPLOADS = 'footfall_uploads_v1';
 
-  let records = [];   // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, cameraName, uploadId}
+  let records = [];    // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, cameraName, uploadId}
   let uploads = [];    // {id, filename, cameraName, label, count, uploadedAt}
   let chartType = 'line';
   let trendChart = null;
@@ -304,9 +283,8 @@
 
   // ---------- filename parsing ----------
   // Expected shape:
-  // "{Camera name} export-crosslinecounting-{code} C in|out-{start}-{end}"
-  // e.g. "Binnenplein bron export-crosslinecounting-91.9 C in-2026-07-28T00_00_00.000+0200-..."
-  // Hardcoded IP-code -> camera name lookup
+  // "export-crosslinecounting-{code} C in|out-{start}-{end}"
+  // e.g. "export-crosslinecounting-91.25 C in-2026-08-05T00_00_00.000+0200-..."
   const CAMERA_NAME_MAP = {
     '91.25': 'Scala Zuid',
     '91.26': 'Scala Noord',
@@ -317,17 +295,16 @@
 
   function parseFilenameMeta(filename){
     const base = filename.replace(/\.csv$/i, '');
-    // "export-crosslinecounting-{code} C in|out-{start}-{end}"
     const match = base.match(/^export-crosslinecounting-(.*?)\s+C\s+(in|out)\b/i);
     if(match){
       const code = match[1].trim();
       return {
         cameraName: CAMERA_NAME_MAP[code] || code,
         code: code,
-        label: match[2].toLowerCase() === 'in' ? 'Inside' : 'Outside'
+        label: match[2].toLowerCase() === 'in' ? 'IN' : 'OUT'
       };
     }
-    return { cameraName: base, code: '', label: 'Unlabeled' };
+    return { cameraName: base, code: '', label: 'UNLABELED' };
   }
 
   // ---------- csv upload flow ----------
@@ -394,7 +371,6 @@
     uploads.slice().reverse().forEach(u => {
       const row = document.createElement('div');
       row.className = 'checkbox-row rounded-md px-2 py-1.5 flex items-center justify-between gap-2';
-      const d = new Date(u.uploadedAt);
       row.innerHTML = `
         <div class="min-w-0">
           <p class="text-[12px] text-[var(--text)] truncate">${escapeHtml(u.cameraName || u.filename)}</p>
@@ -441,7 +417,7 @@
       if(resetSelection || !activeFilters.dateTo){ dateTo.value = dates[dates.length-1]; activeFilters.dateTo = dates[dates.length-1]; }
     }
 
-    // labels
+    // labels (IN / OUT / any custom fallback)
     const labels = ['All', ...Array.from(new Set(records.map(r => r.label))).sort()];
     const labelGroup = document.getElementById('labelFilterGroup');
     labelGroup.innerHTML = '';
@@ -460,15 +436,17 @@
       labelGroup.appendChild(btn);
     });
 
-    // camera serials
+    // camera names
     const cameras = Array.from(new Set(records.map(r => r.cameraName))).sort();
     if(resetSelection) activeFilters.cameras = new Set(cameras);
     renderCheckboxList('cameraFilterList', cameras, activeFilters.cameras);
+    updateDropdownBadge('cameraFilterBadge', activeFilters.cameras, cameras);
 
     // scenario names
     const scenarios = Array.from(new Set(records.map(r => r.scenarioName))).sort();
     if(resetSelection) activeFilters.scenarios = new Set(scenarios);
     renderCheckboxList('scenarioFilterList', scenarios, activeFilters.scenarios);
+    updateDropdownBadge('scenarioFilterBadge', activeFilters.scenarios, scenarios);
   }
 
   function styleLabelBtn(btn, active){
@@ -499,9 +477,20 @@
       container.appendChild(row);
       row.querySelector('input').addEventListener('change', (e) => {
         if(e.target.checked) activeSet.add(val); else activeSet.delete(val);
+        const badgeId = containerId === 'cameraFilterList' ? 'cameraFilterBadge' : 'scenarioFilterBadge';
+        updateDropdownBadge(badgeId, activeSet, values);
         applyFiltersAndRender();
       });
     });
+  }
+
+  function updateDropdownBadge(badgeId, activeSet, allValues){
+    const badge = document.getElementById(badgeId);
+    if(!badge) return;
+    if(allValues.length === 0){ badge.textContent = '—'; return; }
+    if(activeSet.size === 0){ badge.textContent = 'None'; return; }
+    if(activeSet.size === allValues.length){ badge.textContent = 'All'; return; }
+    badge.textContent = activeSet.size + ' selected';
   }
 
   document.querySelectorAll('.selectAllBtn').forEach(btn => {
@@ -511,14 +500,38 @@
       const container = document.getElementById(targetId);
       const checkboxes = container.querySelectorAll('input.filterCheckbox');
       const allChecked = Array.from(checkboxes).every(c => c.checked);
+      const allValues = [];
       checkboxes.forEach(c => {
-        c.checked = !allChecked;
         const val = c.nextElementSibling.textContent;
+        allValues.push(val);
+        c.checked = !allChecked;
         if(!allChecked) activeSet.add(val); else activeSet.delete(val);
       });
+      const badgeId = targetId === 'cameraFilterList' ? 'cameraFilterBadge' : 'scenarioFilterBadge';
+      updateDropdownBadge(badgeId, activeSet, allValues);
       applyFiltersAndRender();
     });
   });
+
+  // ---------- dropdown open/close ----------
+  function setupDropdown(btnId, panelId){
+    const btn = document.getElementById(btnId);
+    const panel = document.getElementById(panelId);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !panel.classList.contains('hidden');
+      closeAllDropdowns();
+      if(!isOpen) panel.classList.remove('hidden');
+    });
+    panel.addEventListener('click', (e) => e.stopPropagation());
+  }
+  function closeAllDropdowns(){
+    document.getElementById('cameraDropdownPanel').classList.add('hidden');
+    document.getElementById('scenarioDropdownPanel').classList.add('hidden');
+  }
+  document.addEventListener('click', closeAllDropdowns);
+  setupDropdown('cameraDropdownBtn', 'cameraDropdownPanel');
+  setupDropdown('scenarioDropdownBtn', 'scenarioDropdownPanel');
 
   document.getElementById('dateFrom').addEventListener('change', (e) => { activeFilters.dateFrom = e.target.value; applyFiltersAndRender(); });
   document.getElementById('dateTo').addEventListener('change', (e) => { activeFilters.dateTo = e.target.value; applyFiltersAndRender(); });
@@ -626,16 +639,19 @@
   }
 
   function renderTrendChart(filtered){
-    const ctx = document.getElementById('trendChart').getContext('2d');
+    const canvas = document.getElementById('trendChart');
+    if(!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
     const labelsSet = Array.from(new Set(filtered.map(r => r.label))).sort();
     let dateKeys = getDateKeyRange(activeFilters.dateFrom, activeFilters.dateTo);
     if(dateKeys.length === 0){
       dateKeys = Array.from(new Set(filtered.map(r => r.dateKey))).sort();
     }
 
-    const datasets = labelsSet.map((lbl, i) => {
+    const datasets = (labelsSet.length ? labelsSet : ['Total']).map((lbl, i) => {
       const byDate = {};
-      filtered.filter(r => r.label === lbl).forEach(r => { byDate[r.dateKey] = (byDate[r.dateKey]||0) + r.human; });
+      const rowsForLabel = labelsSet.length ? filtered.filter(r => r.label === lbl) : filtered;
+      rowsForLabel.forEach(r => { byDate[r.dateKey] = (byDate[r.dateKey]||0) + r.human; });
       const color = palette[i % palette.length];
       return {
         label: lbl,
@@ -650,21 +666,23 @@
       };
     });
 
-    if(trendChart) trendChart.destroy();
+    if(trendChart){ trendChart.destroy(); trendChart = null; }
     trendChart = new Chart(ctx, {
       type: chartType,
       data: { labels: dateKeys, datasets: datasets },
-      options: chartBaseOptions(labelsSet.length > 1)
+      options: chartBaseOptions(labelsSet.length > 1, 'Date', 'Visitors (human)')
     });
   }
 
   function renderCameraChart(filtered){
-    const ctx = document.getElementById('cameraChart').getContext('2d');
+    const canvas = document.getElementById('cameraChart');
+    if(!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
     const byCam = {};
     filtered.forEach(r => { byCam[r.cameraName] = (byCam[r.cameraName]||0) + r.human; });
     const entries = Object.entries(byCam).sort((a,b) => b[1]-a[1]);
 
-    if(cameraChart) cameraChart.destroy();
+    if(cameraChart){ cameraChart.destroy(); cameraChart = null; }
     cameraChart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -679,11 +697,11 @@
           maxBarThickness: 42
         }]
       },
-      options: chartBaseOptions(false)
+      options: chartBaseOptions(false, 'Camera', 'Visitors (human)')
     });
   }
 
-  function chartBaseOptions(showLegend){
+  function chartBaseOptions(showLegend, xTitle, yTitle){
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -702,8 +720,17 @@
         }
       },
       scales: {
-        x: { ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 }, maxRotation: 0, autoSkip: true }, grid: { color: '#00000000' } },
-        y: { ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 } }, grid: { color: '#E5E7EB' }, beginAtZero: true }
+        x: {
+          title: { display: !!xTitle, text: xTitle, color: '#9CA3AF', font: { family: 'Inter', size: 11 } },
+          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 }, maxRotation: 0, autoSkip: true },
+          grid: { color: '#00000000' }
+        },
+        y: {
+          title: { display: !!yTitle, text: yTitle, color: '#9CA3AF', font: { family: 'Inter', size: 11 } },
+          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 } },
+          grid: { color: '#E5E7EB' },
+          beginAtZero: true
+        }
       }
     };
   }
