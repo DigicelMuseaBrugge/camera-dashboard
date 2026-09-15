@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Footfall — Foot Traffic Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -170,21 +169,11 @@
 
       <div id="dashboardContent" class="hidden">
         <!-- Summary cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div class="card rounded-lg p-4">
-            <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Total foot traffic</p>
-            <p id="statTotal" class="mono text-[26px] font-semibold mt-1.5 text-[var(--text)]">0</p>
-            <p id="statTotalSub" class="text-[12px] text-[var(--muted)] mt-1">—</p>
-          </div>
+        <div class="grid grid-cols-2 gap-3 mb-6">
           <div class="card rounded-lg p-4">
             <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Busiest day</p>
             <p id="statBusiestDay" class="mono text-[26px] font-semibold mt-1.5 text-[var(--amber)]">—</p>
             <p id="statBusiestDaySub" class="text-[12px] text-[var(--muted)] mt-1">—</p>
-          </div>
-          <div class="card rounded-lg p-4">
-            <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Peak hour</p>
-            <p id="statPeakHour" class="mono text-[26px] font-semibold mt-1.5 text-[var(--teal)]">—</p>
-            <p id="statPeakHourSub" class="text-[12px] text-[var(--muted)] mt-1">—</p>
           </div>
           <div class="card rounded-lg p-4">
             <p class="text-[11px] uppercase tracking-wide text-[var(--muted-2)]">Active cameras</p>
@@ -193,26 +182,12 @@
           </div>
         </div>
 
-        <!-- Trend chart -->
+        <!-- Camera overview -->
         <div class="card rounded-lg p-5 mb-5">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h3 class="text-[14px] font-medium">Traffic over time</h3>
-              <p class="text-[12px] text-[var(--muted)] mt-0.5">Daily totals, split by location where labelled</p>
-            </div>
-            <div class="flex items-center gap-1 bg-[var(--panel-2)] border border-[var(--border)] rounded-md p-0.5">
-              <button data-chart-type="line" class="chartTypeBtn tap-target text-[12px] px-3 py-1 rounded transition-colors">Line</button>
-              <button data-chart-type="bar" class="chartTypeBtn tap-target text-[12px] px-3 py-1 rounded transition-colors">Bar</button>
-            </div>
-          </div>
-          <div class="h-[280px]"><canvas id="trendChart"></canvas></div>
-        </div>
-
-        <!-- Camera comparison -->
-        <div class="card rounded-lg p-5 mb-5">
-          <h3 class="text-[14px] font-medium">Traffic by camera</h3>
-          <p class="text-[12px] text-[var(--muted)] mt-0.5 mb-3">Total human count per camera name, current filters applied</p>
-          <div class="h-[240px]"><canvas id="cameraChart"></canvas></div>
+          <h3 class="text-[14px] font-medium">Camera overview</h3>
+          <p class="text-[12px] text-[var(--muted)] mt-0.5 mb-4">Total traffic per camera for the selected period and filters</p>
+          <div id="cameraOverviewList" class="space-y-2.5"></div>
+          <p id="cameraOverviewEmpty" class="text-[12px] text-[var(--muted-2)] italic hidden">No cameras match the current filters.</p>
         </div>
 
         <!-- Records table -->
@@ -251,9 +226,6 @@
 
   let records = [];    // {id, start(Date), dateKey, hour, cameraSerial, scenarioName, human, note, label, cameraName, uploadId}
   let uploads = [];    // {id, filename, cameraName, label, count, uploadedAt}
-  let chartType = 'line';
-  let trendChart = null;
-  let cameraChart = null;
 
   const activeFilters = {
     dateFrom: null,
@@ -541,25 +513,6 @@
     applyFiltersAndRender();
   });
 
-  document.querySelectorAll('.chartTypeBtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      chartType = btn.dataset.chartType;
-      styleChartTypeBtns();
-      applyFiltersAndRender();
-    });
-  });
-  function styleChartTypeBtns(){
-    document.querySelectorAll('.chartTypeBtn').forEach(b => {
-      if(b.dataset.chartType === chartType){
-        b.style.background = 'var(--panel)';
-        b.style.color = 'var(--text)';
-      }else{
-        b.style.background = 'transparent';
-        b.style.color = 'var(--muted)';
-      }
-    });
-  }
-
   // ---------- filtering + render orchestration ----------
   function getFilteredRecords(){
     return records.filter(r => {
@@ -584,8 +537,7 @@
     }
     renderRangeLabel(filtered);
     renderSummary(filtered);
-    renderTrendChart(filtered);
-    renderCameraChart(filtered);
+    renderCameraOverview(filtered);
     renderTable(filtered);
     document.getElementById('recordCountHeader').textContent = filtered.length.toLocaleString();
   }
@@ -598,11 +550,6 @@
 
   // ---------- summary ----------
   function renderSummary(filtered){
-    const total = filtered.reduce((s,r) => s + r.human, 0);
-    document.getElementById('statTotal').textContent = Math.round(total).toLocaleString();
-    const numDays = new Set(filtered.map(r => r.dateKey)).size;
-    document.getElementById('statTotalSub').textContent = numDays ? `avg ${(Math.round(total/numDays)).toLocaleString()} / day` : '—';
-
     // busiest day
     const byDate = {};
     filtered.forEach(r => { byDate[r.dateKey] = (byDate[r.dateKey]||0) + r.human; });
@@ -611,128 +558,56 @@
     document.getElementById('statBusiestDay').textContent = busiestDate || '—';
     document.getElementById('statBusiestDaySub').textContent = busiestDate ? `${Math.round(busiestVal).toLocaleString()} visits` : '—';
 
-    // peak hour
-    const byHour = {};
-    filtered.forEach(r => { byHour[r.hour] = (byHour[r.hour]||0) + r.human; });
-    let peakHour = null, peakVal = -1;
-    Object.entries(byHour).forEach(([h,v]) => { if(v > peakVal){ peakVal = v; peakHour = h; } });
-    document.getElementById('statPeakHour').textContent = peakHour !== null ? String(peakHour).padStart(2,'0')+':00' : '—';
-    document.getElementById('statPeakHourSub').textContent = peakHour !== null ? `${Math.round(peakVal).toLocaleString()} visits at this hour` : '—';
-
     // active cameras
     const cams = new Set(filtered.map(r => r.cameraName));
     document.getElementById('statCameras').textContent = cams.size;
     document.getElementById('statCamerasSub').textContent = cams.size === 1 ? '1 camera in view' : `${cams.size} cameras in view`;
   }
 
-  // ---------- charts ----------
-  function getDateKeyRange(fromKey, toKey){
-    if(!fromKey || !toKey) return [];
-    const keys = [];
-    let cursor = new Date(fromKey + 'T00:00:00Z');
-    const end = new Date(toKey + 'T00:00:00Z');
-    while(cursor <= end){
-      keys.push(cursor.toISOString().slice(0,10));
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
-    return keys;
-  }
+  // ---------- camera overview ----------
+  function renderCameraOverview(filtered){
+    const list = document.getElementById('cameraOverviewList');
+    const empty = document.getElementById('cameraOverviewEmpty');
+    list.innerHTML = '';
 
-  function renderTrendChart(filtered){
-    const canvas = document.getElementById('trendChart');
-    if(!canvas || typeof Chart === 'undefined') return;
-    const ctx = canvas.getContext('2d');
-    const labelsSet = Array.from(new Set(filtered.map(r => r.label))).sort();
-    let dateKeys = getDateKeyRange(activeFilters.dateFrom, activeFilters.dateTo);
-    if(dateKeys.length === 0){
-      dateKeys = Array.from(new Set(filtered.map(r => r.dateKey))).sort();
-    }
-
-    const datasets = (labelsSet.length ? labelsSet : ['Total']).map((lbl, i) => {
-      const byDate = {};
-      const rowsForLabel = labelsSet.length ? filtered.filter(r => r.label === lbl) : filtered;
-      rowsForLabel.forEach(r => { byDate[r.dateKey] = (byDate[r.dateKey]||0) + r.human; });
-      const color = palette[i % palette.length];
-      return {
-        label: lbl,
-        data: dateKeys.map(d => byDate[d] || 0),
-        borderColor: color,
-        backgroundColor: chartType === 'bar' ? color + 'CC' : color + '22',
-        pointRadius: chartType === 'line' ? 2 : 0,
-        pointHoverRadius: 4,
-        borderWidth: 2,
-        tension: 0.3,
-        fill: chartType === 'line'
-      };
-    });
-
-    if(trendChart){ trendChart.destroy(); trendChart = null; }
-    trendChart = new Chart(ctx, {
-      type: chartType,
-      data: { labels: dateKeys, datasets: datasets },
-      options: chartBaseOptions(labelsSet.length > 1, 'Date', 'Visitors (human)')
-    });
-  }
-
-  function renderCameraChart(filtered){
-    const canvas = document.getElementById('cameraChart');
-    if(!canvas || typeof Chart === 'undefined') return;
-    const ctx = canvas.getContext('2d');
     const byCam = {};
-    filtered.forEach(r => { byCam[r.cameraName] = (byCam[r.cameraName]||0) + r.human; });
-    const entries = Object.entries(byCam).sort((a,b) => b[1]-a[1]);
-
-    if(cameraChart){ cameraChart.destroy(); cameraChart = null; }
-    cameraChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: entries.map(e => e[0]),
-        datasets: [{
-          label: 'Total human count',
-          data: entries.map(e => e[1]),
-          backgroundColor: '#0D948833',
-          borderColor: '#0D9488',
-          borderWidth: 1.5,
-          borderRadius: 3,
-          maxBarThickness: 42
-        }]
-      },
-      options: chartBaseOptions(false, 'Camera', 'Visitors (human)')
+    filtered.forEach(r => {
+      if(!byCam[r.cameraName]) byCam[r.cameraName] = { total: 0, in: 0, out: 0 };
+      byCam[r.cameraName].total += r.human;
+      if(r.label === 'IN') byCam[r.cameraName].in += r.human;
+      else if(r.label === 'OUT') byCam[r.cameraName].out += r.human;
     });
-  }
 
-  function chartBaseOptions(showLegend, xTitle, yTitle){
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: showLegend, labels: { color: '#6B7280', boxWidth: 10, font: { family: 'Inter', size: 11.5 } } },
-        tooltip: {
-          backgroundColor: '#FFFFFF',
-          borderColor: '#D1D5DB',
-          borderWidth: 1,
-          titleColor: '#111827',
-          bodyColor: '#374151',
-          titleFont: { family: 'IBM Plex Mono', size: 11.5 },
-          bodyFont: { family: 'IBM Plex Mono', size: 11.5 },
-          padding: 10
-        }
-      },
-      scales: {
-        x: {
-          title: { display: !!xTitle, text: xTitle, color: '#9CA3AF', font: { family: 'Inter', size: 11 } },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 }, maxRotation: 0, autoSkip: true },
-          grid: { color: '#00000000' }
-        },
-        y: {
-          title: { display: !!yTitle, text: yTitle, color: '#9CA3AF', font: { family: 'Inter', size: 11 } },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10.5 } },
-          grid: { color: '#E5E7EB' },
-          beginAtZero: true
-        }
-      }
-    };
+    const entries = Object.entries(byCam).sort((a,b) => b[1].total - a[1].total);
+
+    if(entries.length === 0){
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    const maxTotal = entries[0][1].total || 1;
+
+    entries.forEach(([name, stats], i) => {
+      const color = palette[i % palette.length];
+      const pct = Math.max(4, Math.round((stats.total / maxTotal) * 100));
+      const hasBreakdown = stats.in > 0 || stats.out > 0;
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-4';
+      row.innerHTML = `
+        <div class="w-40 shrink-0">
+          <p class="text-[13px] font-medium text-[var(--text)] truncate">${escapeHtml(name)}</p>
+          ${hasBreakdown ? `<p class="text-[11px] text-[var(--muted-2)] mono">${Math.round(stats.in).toLocaleString()} IN · ${Math.round(stats.out).toLocaleString()} OUT</p>` : ''}
+        </div>
+        <div class="flex-1 h-2.5 rounded-full bg-[var(--panel-2)] border border-[var(--border)] overflow-hidden">
+          <div class="h-full rounded-full" style="width:${pct}%; background:${color};"></div>
+        </div>
+        <div class="w-24 shrink-0 text-right">
+          <p class="mono text-[15px] font-semibold text-[var(--text)]">${Math.round(stats.total).toLocaleString()}</p>
+          <p class="text-[10.5px] text-[var(--muted-2)]">visitors</p>
+        </div>`;
+      list.appendChild(row);
+    });
   }
 
   // ---------- table ----------
@@ -759,7 +634,6 @@
   loadState();
   rebuildFilterOptions(true);
   renderUploadsList();
-  styleChartTypeBtns();
   applyFiltersAndRender();
 
 })();
